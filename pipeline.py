@@ -56,10 +56,10 @@ if not WGET_AT:
 #
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
-VERSION = '20211009.01'
+VERSION = '20211010.01'
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0'
 TRACKER_ID = 'youtube-discussions'
-TRACKER_HOST = 'localhost:9080' #'legacy-api.arpa.li'
+TRACKER_HOST = 'legacy-api.arpa.li'
 MULTI_ITEM_SIZE = 1 # DO NOT CHANGE
 
 
@@ -361,7 +361,7 @@ class WgetArgs(object):
             wget_args.extend(['--warc-header', 'x-wget-at-project-item-name: '+item_name])
             wget_args.append('item-name://'+item_name)
             item_type, item_value = item_name.split(':', 1)
-            if item_type in ('d'):
+            if item_type in ('ch-discussions',):
                 wget_args.extend(['--warc-header', 'youtube-channel-discussions: '+item_value])
                 wget_args.extend(['--body-data', dumps({"context": generateContext(), "continuation": generate_discussion_continuation(item_value)})])
                 wget_args.append('https://www.youtube.com/youtubei/v1/browse?key='+INNERTUBE_API_KEY)
@@ -404,7 +404,7 @@ pipeline = Pipeline(
     GetItemFromTracker('http://{}/{}/multi={}/'
         .format(TRACKER_HOST, TRACKER_ID, MULTI_ITEM_SIZE),
         downloader, VERSION),
-    PrepareDirectories(warc_prefix='youtube'),
+    PrepareDirectories(warc_prefix='youtube-discussions'),
     WgetDownload(
         WgetArgs(),
         max_tries=1,

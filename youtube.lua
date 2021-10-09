@@ -20,6 +20,7 @@ local addedtolist = {}
 local abortgrab = false
 
 local discovered = {}
+local discovered_discussions = {}
 local outlinks = {}
 
 local bad_items = {}
@@ -81,6 +82,9 @@ queue_item = function(type_, value)
   new_item = type_ .. ":" .. value
   if not discovered[new_item] then
     discovered[new_item] = true
+  end
+  if type_ == "ch" then
+    discovered_discussions["ch-discussions:" .. value] = true
   end
 end
 
@@ -956,6 +960,7 @@ wget.callbacks.finish = function(start_time, end_time, wall_time, numurls, total
   local items = nil
   for key, data in pairs({
     ["youtube-stash-sntka07rbuq0yyy"]=discovered, -- youtube-asje0zkb3w6xwnz
+    ["youtube-discussions-mr7pgh3orvtkuet"]=discovered_discussions,
     ["urls-rdbamz622bgqchg"]=outlinks
   }) do
     for item, _ in pairs(data) do
