@@ -90,7 +90,7 @@ end
 
 get_item = function(url)
   local match = "channel-discussions" -- string.match(url, "^https?://www%.youtube%.com/watch%?v=(" .. video_pattern .. ")$")
-  local type_ = "d"
+  local type_ = "ch-discussions"
   -- if v2_items[match] then
   --   type_ = "v2"
   -- elseif v1_items[match] then
