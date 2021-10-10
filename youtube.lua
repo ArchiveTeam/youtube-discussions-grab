@@ -514,11 +514,11 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
 
   local function queue_continuation_new(continuation_item_renderer)
     local continuation_endpoint = continuation_item_renderer["continuationEndpoint"]
-    if not continuation_endpoint and not sorted_new then
-      print("switching order")
-      continuation_endpoint = continuation_item_renderer
-      -- print(table.show(continuation_endpoint))
-    end
+    -- if not continuation_endpoint and not sorted_new then
+    --   print("switching order")
+    --   continuation_endpoint = continuation_item_renderer
+    --   -- print(table.show(continuation_endpoint))
+    -- end
     if not continuation_endpoint then
       print("getting more replies")
       continuation_endpoint = continuation_item_renderer["button"]["buttonRenderer"]["command"]
@@ -758,7 +758,7 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
         end
       end
     end
-    if string.match(url, "^https?://[^/]*youtube.com/youtubei/v1/browse") then
+    if string.match(url, "^https?://[^/]*youtube.com/youtubei/v1/browse") or string.match(url, "^https?://[^/]*youtube.com/youtubei/v1/comment/get_comment_replies") then
       local data = JSON:decode(html)["onResponseReceivedEndpoints"]
       local just_sorted = false
       local sorted_new = true
@@ -822,7 +822,7 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
         if i < 128 then
           return string.char(i)
         else
-          print("Unsupported character.")
+          -- print("Unsupported character.")
         end
       end
     )
