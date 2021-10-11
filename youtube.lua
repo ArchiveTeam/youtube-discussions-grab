@@ -64,6 +64,10 @@ for ignore in io.open("ignore-list", "r"):lines() do
   downloaded[ignore] = true
 end
 
+local post_data_file = assert(io.open(item_dir .. "/" .. warc_file_base .. "_post_data.json"))
+local all_post_data = JSON:decode(post_data_file:read("*all"))
+post_data_file:close()
+
 queue_item = function(type_, value)
   if type_ == "c" or type_ == "u" then
     temp = ""
@@ -536,6 +540,23 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
     check(match)
   end
 
+  if string.match(url, "^https?://[^/]*youtube%.com/youtubei/v1/dummy%?channel=") then
+    local channel_id = string.match(url, "%?channel=(.+)$")
+    print('POSTing', channel_id)
+    table.insert(
+      urls,
+      {
+        url="https://www.youtube.com/youtubei/v1/browse?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8",
+        method="POST",
+        body_data=all_post_data[channel_id],
+        headers={
+          Referer=nil
+        }
+      }
+    )
+    return urls
+  end
+
   if allowed(url, nil) and status_code == 200
     and not string.match(url, "^https?://[^/]*googlevideo%.com")
     and not string.match(url, "^https?://[^/]*ytimg%.com") then
@@ -883,6 +904,13 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
   return urls
 end
 
+wget.callbacks.write_to_warc = function(url, http_stat)
+  if string.match(url["url"], "^https?://[^/]*youtube%.com/youtubei/v1/dummy%?channel=") then
+    return false
+  end
+  return true
+end
+
 wget.callbacks.httploop_result = function(url, err, http_stat)
   local function banned()
     print("you're likely banned, sleeping for 1800 seconds.")
@@ -900,6 +928,10 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
   if status_code == 429 then
     banned()
     return wget.actions.ABORT
+  end
+
+  if string.match(url["url"], "^https?://[^/]*youtube%.com/youtubei/v1/dummy%?channel=") then
+    return wget.actions.NOTHING
   end
 
   if status_code >= 300 and status_code <= 399 then

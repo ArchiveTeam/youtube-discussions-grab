@@ -1,7 +1,9 @@
 # encoding=utf8
+import base64
 import datetime
 from distutils.version import StrictVersion
 import hashlib
+import json
 import os.path
 import random
 from seesaw.config import realize, NumberConfigValue
@@ -22,10 +24,6 @@ from seesaw.externalprocess import WgetDownload
 from seesaw.pipeline import Pipeline
 from seesaw.project import Project
 from seesaw.util import find_executable
-
-from base64 import b64encode, b64decode
-
-from json import dumps
 
 if StrictVersion(seesaw.__version__) < StrictVersion('0.8.5'):
     raise Exception('This pipeline needs seesaw version 0.8.5 or higher.')
@@ -56,11 +54,11 @@ if not WGET_AT:
 #
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
-VERSION = '20211010.03'
+VERSION = '20211011.01'
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0'
 TRACKER_ID = 'youtube-discussions'
 TRACKER_HOST = 'legacy-api.arpa.li'
-MULTI_ITEM_SIZE = 1 # DO NOT CHANGE
+MULTI_ITEM_SIZE = 200
 
 
 INNERTUBE_API_KEY = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8"
@@ -204,13 +202,13 @@ def generate_discussion_continuation(channel_id):
     ch_id = bytes(channel_id.encode('utf-8'))
 
     def _generate_secondary_token():
-        first = b64decode('EgpkaXNjdXNzaW9uqgM2IiASGA==')
-        second = b64decode('KAEwAXgCOAFCEGNvbW1lbnRzLXNlY3Rpb24=')
-        return b64encode(first + ch_id + second)
+        first = base64.b64decode('EgpkaXNjdXNzaW9uqgM2IiASGA==')
+        second = base64.b64decode('KAEwAXgCOAFCEGNvbW1lbnRzLXNlY3Rpb24=')
+        return base64.b64encode(first + ch_id + second)
 
-    first = b64decode('4qmFsgJ4Ehg=')
-    second = b64decode('Glw=')
-    return b64encode(first + ch_id + second + _generate_secondary_token()).decode('utf-8')
+    first = base64.b64decode('4qmFsgJ4Ehg=')
+    second = base64.b64decode('Glw=')
+    return base64.b64encode(first + ch_id + second + _generate_secondary_token()).decode('utf-8')
 
 def generateContext():
     context = {"client" : {}, "user" : {}, "request" : {}, "clickTracking" : {}}
@@ -357,14 +355,16 @@ class WgetArgs(object):
 
         # v_items = [[], []]
 
+        all_post_data = {}
+
         for item_name in item['item_name'].split('\0'):
             wget_args.extend(['--warc-header', 'x-wget-at-project-item-name: '+item_name])
             wget_args.append('item-name://'+item_name)
             item_type, item_value = item_name.split(':', 1)
             if item_type in ('ch-discussions',):
                 wget_args.extend(['--warc-header', 'youtube-channel-discussions: '+item_value])
-                wget_args.extend(['--body-data', dumps({"context": generateContext(), "continuation": generate_discussion_continuation(item_value)})])
-                wget_args.append('https://www.youtube.com/youtubei/v1/browse?key='+INNERTUBE_API_KEY)
+                all_post_data[item_value] = json.dumps({"context": generateContext(), "continuation": generate_discussion_continuation(item_value)})
+                wget_args.append('https://www.youtube.com/youtubei/v1/dummy?channel='+item_value)
                 # if item_type == 'v1':
                 #     v_items[0].append(item_value)
                 # elif item_type == 'v2':
@@ -376,6 +376,9 @@ class WgetArgs(object):
         # item['v2_items'] = ';'.join(v_items[1])
 
         item['item_name_newline'] = item['item_name'].replace('\0', '\n')
+
+        with open(os.path.join(item['item_dir'], item['warc_file_base'] + '_post_data.json'), 'w') as f:
+            json.dump(all_post_data, f)
 
         if 'bind_address' in globals():
             wget_args.extend(['--bind-address', globals()['bind_address']])
@@ -411,7 +414,7 @@ pipeline = Pipeline(
         accept_on_exit_code=[0, 4, 8],
         env={
             'item_dir': ItemValue('item_dir'),
-            'warc_file_base': ItemValue('warc_file_base') #,
+            'warc_file_base': ItemValue('warc_file_base')
             # 'v1_items': ItemValue('v1_items'),
             # 'v2_items': ItemValue('v2_items')
         }
